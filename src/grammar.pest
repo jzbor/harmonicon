@@ -1,0 +1,21 @@
+file		= { SOI ~ assignment* ~ EOI }
+
+assignment	= { type ~ name ~ "=" ~ initializer }
+type		= { const_type | osc_type | amp_type }
+initializer 	= { const_initializer | block_initializer }
+anonymous 	= { (const_type ~ const_initializer) | (osc_type ~ block_initializer) | (amp_type ~ block_initializer) }
+name		= @{ (ASCII_ALPHANUMERIC | "_" | "-")+ }
+
+const_type 	= @{ "constant" | "const" }
+osc_type	= @{ "oscillator" | "osc" }
+amp_type	= @{ "amplifier" | "amp" }
+
+const_initializer	= @{ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT+ }
+block_initializer	= { "{" ~ block_parameter* ~ "}" }
+
+block_parameter		= { parameter_name ~ ":" ~ parameter_value ~ "," }
+parameter_name		= @{ (ASCII_ALPHA | "_" | "-")+ }
+parameter_value 	= _{ anonymous | name }
+
+WHITESPACE = _{ " " | "\n" | "\t" }
+COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
