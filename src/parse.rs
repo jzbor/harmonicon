@@ -7,6 +7,7 @@ use pest::{iterators::*, Parser};
 use crate::blocks::amplifier::AmplifierBlock;
 use crate::blocks::constant::ConstantBlock;
 use crate::blocks::oscillator::OscillatorBlock;
+use crate::blocks::stereo::StereoBlock;
 use crate::blocks::{BlockType, SignalBlock, SignalSource};
 use crate::error::HarmoniconError;
 use crate::driver::HarmoniconDriver;
@@ -25,6 +26,7 @@ fn parse_anon_init(pair: Pair<'_, Rule>, driver: &HarmoniconDriver) -> crate::Re
         Constant => parse_const_init(init).map(|sb| Arc::new(Mutex::new(sb)) as Arc<Mutex<dyn SignalBlock>>),
         Oscillator => parse_osc_init(init, driver).map(|sb| Arc::new(Mutex::new(sb)) as Arc<Mutex<dyn SignalBlock>>),
         Amplifier => parse_amp_init(init, driver).map(|sb| Arc::new(Mutex::new(sb)) as Arc<Mutex<dyn SignalBlock>>),
+        Stereo => parse_stereo_init(init, driver).map(|sb| Arc::new(Mutex::new(sb)) as Arc<Mutex<dyn SignalBlock>>),
     }
 }
 
@@ -66,7 +68,7 @@ fn parse_osc_init(pair: Pair<'_, Rule>, driver: &HarmoniconDriver) -> crate::Res
 
 fn parse_amp_init(pair: Pair<'_, Rule>, driver: &HarmoniconDriver) -> crate::Result<AmplifierBlock> {
     if pair.as_rule() != Rule::block_initializer {
-        Err(HarmoniconError::TypeError("oscillator initializer", "other initializer"))
+        Err(HarmoniconError::TypeError("amplifier initializer", "other initializer"))
     } else {
         let mut amp = AmplifierBlock::default();
         for item in pair.into_inner() {
@@ -83,6 +85,29 @@ fn parse_amp_init(pair: Pair<'_, Rule>, driver: &HarmoniconDriver) -> crate::Res
             }
         }
         Ok(amp)
+    }
+}
+
+fn parse_stereo_init(pair: Pair<'_, Rule>, driver: &HarmoniconDriver) -> crate::Result<StereoBlock> {
+    if pair.as_rule() != Rule::block_initializer {
+        Err(HarmoniconError::TypeError("stereo initializer", "other initializer"))
+    } else {
+        let mut stereo = StereoBlock::default();
+        for item in pair.into_inner() {
+            let mut inner = item.into_inner();
+            let key = inner.next().unwrap().as_str();
+
+            let value = inner.next().unwrap();
+            let rhs = parse_param_rhs(value, driver)?;
+
+            match key {
+                "left" | "l" => stereo.update_left(rhs),
+                "right" | "r" => stereo.update_right(rhs),
+                "shift" | "s" => stereo.update_shift(rhs),
+                _ => return Err(HarmoniconError::UnknownProperty(key.to_owned(), "stereo")),
+            }
+        }
+        Ok(stereo)
     }
 }
 
@@ -116,6 +141,7 @@ pub fn parse_stage2(pair: Pair<'_, Rule>) -> crate::Result<HarmoniconDriver> {
             Constant => driver.register_block(name.to_owned(), parse_const_init(initializer)?),
             Oscillator => driver.register_block(name.to_owned(), parse_osc_init(initializer, &driver)?),
             Amplifier => driver.register_block(name.to_owned(), parse_amp_init(initializer, &driver)?),
+            Stereo => driver.register_block(name.to_owned(), parse_stereo_init(initializer, &driver)?),
         };
     }
 

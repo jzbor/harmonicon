@@ -1,18 +1,30 @@
 use std::str::FromStr;
 use std::sync::{Arc, Mutex, Weak};
 
+use crate::blocks::constant::ConstantBlock;
+
 pub mod constant;
 pub mod oscillator;
 pub mod amplifier;
+pub mod stereo;
 
 pub trait SignalBlock : Send {
     fn step(&mut self);
-    fn get(&self) -> f32;
-    fn sync_from(&mut self, other: &dyn SignalBlock);
+    fn get_mono(&self) -> f32;
     fn block_type(&self) -> BlockType;
+
+    fn sync_from(&mut self, other: &dyn SignalBlock) {}
 
     fn sync_value(&self) -> f32 {
         0.0
+    }
+
+    fn get_left(&self) -> f32 {
+        self.get_mono()
+    }
+
+    fn get_right(&self) -> f32 {
+        self.get_mono()
     }
 }
 
@@ -26,6 +38,7 @@ pub enum BlockType {
     Constant,
     Oscillator,
     Amplifier,
+    Stereo,
 }
 
 
@@ -44,7 +57,18 @@ impl SignalSource {
             Anonymous(sb) => sb.lock().unwrap().step(),
             Named(_, _) => (),
         }
+    }
 
+    pub fn get_mono(&self) -> f32 {
+        self.inner().lock().unwrap().get_mono()
+    }
+
+    pub fn get_left(&self) -> f32 {
+        self.inner().lock().unwrap().get_left()
+    }
+
+    pub fn get_right(&self) -> f32 {
+        self.inner().lock().unwrap().get_right()
     }
 }
 
@@ -58,7 +82,14 @@ impl FromStr for BlockType {
             "constant" | "const" => Ok(Constant),
             "oscillator" | "osc" => Ok(Oscillator),
             "amplifier" | "amp" => Ok(Amplifier),
+            "stereo" => Ok(Stereo),
             _ => Err(()),
         }
+    }
+}
+
+impl Default for SignalSource {
+    fn default() -> Self {
+        SignalSource::Anonymous(Arc::new(Mutex::new(ConstantBlock::default())))
     }
 }

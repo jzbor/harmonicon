@@ -2,7 +2,7 @@ use std::sync::*;
 use std::f32::consts::*;
 
 use crate::blocks::constant::ConstantBlock;
-use crate::blocks::{SignalBlock, SignalSource};
+use crate::blocks::{BlockType, SignalBlock, SignalSource};
 
 pub struct AmplifierBlock {
     source: SignalSource,
@@ -26,16 +26,26 @@ impl SignalBlock for AmplifierBlock {
         self.multiplicator.step();
     }
 
-    fn get(&self) -> f32 {
-        let src = self.source.inner().lock().unwrap().get();
-        let mult = self.multiplicator.inner().lock().unwrap().get();
+    fn get_mono(&self) -> f32 {
+        let src = self.source.inner().lock().unwrap().get_mono();
+        let mult = self.multiplicator.inner().lock().unwrap().get_mono();
         src * mult
     }
 
-    fn sync_from(&mut self, other: &dyn SignalBlock) { }
+    fn get_left(&self) -> f32 {
+        let src_left = self.source.inner().lock().unwrap().get_left();
+        let mult = self.multiplicator.inner().lock().unwrap().get_mono();
+        src_left * mult
+    }
+
+    fn get_right(&self) -> f32 {
+        let src_right = self.source.inner().lock().unwrap().get_right();
+        let mult = self.multiplicator.inner().lock().unwrap().get_mono();
+        src_right * mult
+    }
 
     fn block_type(&self) -> super::BlockType {
-        todo!()
+        BlockType::Amplifier
     }
 }
 

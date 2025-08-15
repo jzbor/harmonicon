@@ -25,7 +25,7 @@ impl SignalBlock for OscillatorBlock {
     fn step(&mut self) {
         self.freq_source.step();
 
-        let freq = self.freq_source.inner().lock().unwrap().get();
+        let freq = self.freq_source.inner().lock().unwrap().get_mono();
         self.phase += 2.0 * PI * freq / (crate::SAMPLE_RATE as f32);
 
         // limit phase between 0 and 2*PI to avoid inaccuracies
@@ -37,7 +37,7 @@ impl SignalBlock for OscillatorBlock {
         }
     }
 
-    fn get(&self) -> f32 {
+    fn get_mono(&self) -> f32 {
         f32::sin(self.phase)
     }
 

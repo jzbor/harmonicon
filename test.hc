@@ -1,23 +1,20 @@
 const i = 220.0
 
 osc slow = {
-	freq: const 0.5,
+	freq: const 0.1,
 }
 
-osc fast = {
-	freq: const 0.5,
+osc freq = {
+	freq: const 80.0,
 }
 
-osc osc1 = {
-	freq: amp { src: fast, mult: const 220.0, },
-}
-
-amp amp1 = {
-	src: osc1,
-	mult: slow,
+stereo s = {
+	left: freq,
+	right: freq,
+	shift: slow,
 }
 
 amp out = {
-	src: amp1,
+	src: s,
 	mult: const 0.5,
 }
