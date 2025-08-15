@@ -1,4 +1,5 @@
 use std::str::FromStr;
+use std::sync::mpsc::Receiver;
 use std::sync::{Arc, Mutex};
 
 use pest::{iterators::*, Parser};
@@ -6,64 +7,43 @@ use pest::{iterators::*, Parser};
 use crate::blocks::amplifier::AmplifierBlock;
 use crate::blocks::constant::ConstantBlock;
 use crate::blocks::oscillator::OscillatorBlock;
-use crate::blocks::{SignalBlock, SignalSource};
+use crate::blocks::{BlockType, SignalBlock, SignalSource};
 use crate::error::HarmoniconError;
-use crate::mixer::HarmoniconMixer;
+use crate::driver::HarmoniconDriver;
 
 #[derive(pest_derive::Parser)]
 #[grammar = "grammar.pest"]
 struct HarmoniconParser;
 
-#[derive(Copy, Clone, Debug)]
-enum HarmoniconType {
-    Constant,
-    Oscillator,
-    Amplifier,
-}
-
-impl FromStr for HarmoniconType {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        use HarmoniconType::*;
-        match s {
-            "constant" | "const" => Ok(Constant),
-            "oscillator" | "osc" => Ok(Oscillator),
-            "amplifier" | "amp" => Ok(Amplifier),
-            _ => Err(()),
-        }
-    }
-}
-
-fn parse_anon_init(pair: Pair<'_, Rule>, mixer: &HarmoniconMixer) -> crate::Result<Arc<Mutex<dyn SignalBlock>>> {
+fn parse_anon_init(pair: Pair<'_, Rule>, driver: &HarmoniconDriver) -> crate::Result<Arc<Mutex<dyn SignalBlock>>> {
     let mut inner = pair.into_inner();
     let block_type = inner.next().unwrap().as_str().parse().unwrap();
     let init = inner.next().unwrap();
 
-    use HarmoniconType::*;
+    use BlockType::*;
     match block_type {
         Constant => parse_const_init(init).map(|sb| Arc::new(Mutex::new(sb)) as Arc<Mutex<dyn SignalBlock>>),
-        Oscillator => parse_osc_init(init, mixer).map(|sb| Arc::new(Mutex::new(sb)) as Arc<Mutex<dyn SignalBlock>>),
-        Amplifier => parse_amp_init(init, mixer).map(|sb| Arc::new(Mutex::new(sb)) as Arc<Mutex<dyn SignalBlock>>),
+        Oscillator => parse_osc_init(init, driver).map(|sb| Arc::new(Mutex::new(sb)) as Arc<Mutex<dyn SignalBlock>>),
+        Amplifier => parse_amp_init(init, driver).map(|sb| Arc::new(Mutex::new(sb)) as Arc<Mutex<dyn SignalBlock>>),
     }
 }
 
-fn parse_param_rhs(pair: Pair<'_, Rule>, mixer: &HarmoniconMixer) -> crate::Result<SignalSource> {
+fn parse_param_rhs(pair: Pair<'_, Rule>, driver: &HarmoniconDriver) -> crate::Result<SignalSource> {
     match pair.as_rule() {
         Rule::name => {
-            mixer.get_block(pair.as_str())
+            driver.get_block(pair.as_str())
                 .map(|b| SignalSource::Named(pair.as_str().to_owned(), Arc::downgrade(b)))
                 .ok_or(HarmoniconError::UnknownBlock(pair.as_str().to_owned()))
         },
         Rule::anonymous => {
-            parse_anon_init(pair, &mixer)
+            parse_anon_init(pair, &driver)
                 .map(|b| SignalSource::Anonymous(b))
         },
         _ => panic!(),
     }
 }
 
-fn parse_osc_init(pair: Pair<'_, Rule>, mixer: &HarmoniconMixer) -> crate::Result<OscillatorBlock> {
+fn parse_osc_init(pair: Pair<'_, Rule>, driver: &HarmoniconDriver) -> crate::Result<OscillatorBlock> {
     if pair.as_rule() != Rule::block_initializer {
         Err(HarmoniconError::TypeError("oscillator initializer", "other initializer"))
     } else {
@@ -73,7 +53,7 @@ fn parse_osc_init(pair: Pair<'_, Rule>, mixer: &HarmoniconMixer) -> crate::Resul
             let key = inner.next().unwrap().as_str();
 
             let value = inner.next().unwrap();
-            let rhs = parse_param_rhs(value, mixer)?;
+            let rhs = parse_param_rhs(value, driver)?;
 
             match key {
                 "frequency" | "freq" => osc.update_frequency(rhs),
@@ -84,7 +64,7 @@ fn parse_osc_init(pair: Pair<'_, Rule>, mixer: &HarmoniconMixer) -> crate::Resul
     }
 }
 
-fn parse_amp_init(pair: Pair<'_, Rule>, mixer: &HarmoniconMixer) -> crate::Result<AmplifierBlock> {
+fn parse_amp_init(pair: Pair<'_, Rule>, driver: &HarmoniconDriver) -> crate::Result<AmplifierBlock> {
     if pair.as_rule() != Rule::block_initializer {
         Err(HarmoniconError::TypeError("oscillator initializer", "other initializer"))
     } else {
@@ -94,7 +74,7 @@ fn parse_amp_init(pair: Pair<'_, Rule>, mixer: &HarmoniconMixer) -> crate::Resul
             let key = inner.next().unwrap().as_str();
 
             let value = inner.next().unwrap();
-            let rhs = parse_param_rhs(value, mixer)?;
+            let rhs = parse_param_rhs(value, driver)?;
 
             match key {
                 "source" | "src" => amp.update_source(rhs),
@@ -116,12 +96,12 @@ fn parse_const_init(pair: Pair<'_, Rule>) -> crate::Result<ConstantBlock> {
 }
 
 
-pub fn parse_stage2(pair: Pair<'_, Rule>) -> crate::Result<HarmoniconMixer> {
+pub fn parse_stage2(pair: Pair<'_, Rule>) -> crate::Result<HarmoniconDriver> {
     if pair.as_rule() != Rule::file {
         panic!("Unexpected rule {:?}", pair.as_rule());
     }
 
-    let mut mixer = HarmoniconMixer::new();
+    let mut driver = HarmoniconDriver::new();
 
     for assgn_pair in pair.into_inner().filter(|p| p.as_rule() == Rule::assignment) {
         // Use unwrap() wherever soundness is already guaranteed by the grammar parser
@@ -131,15 +111,15 @@ pub fn parse_stage2(pair: Pair<'_, Rule>) -> crate::Result<HarmoniconMixer> {
         let name = inner.next().unwrap().as_str();
         let initializer = inner.next().unwrap().into_inner().next().unwrap();
 
-        use HarmoniconType::*;
+        use BlockType::*;
         match str::parse(type_str.as_str()).unwrap() {
-            Constant => mixer.register_block(name.to_owned(), parse_const_init(initializer)?),
-            Oscillator => mixer.register_block(name.to_owned(), parse_osc_init(initializer, &mixer)?),
-            Amplifier => mixer.register_block(name.to_owned(), parse_amp_init(initializer, &mixer)?),
+            Constant => driver.register_block(name.to_owned(), parse_const_init(initializer)?),
+            Oscillator => driver.register_block(name.to_owned(), parse_osc_init(initializer, &driver)?),
+            Amplifier => driver.register_block(name.to_owned(), parse_amp_init(initializer, &driver)?),
         };
     }
 
-    Ok(mixer)
+    Ok(driver)
 }
 
 pub fn parse_stage1(input: &str) -> crate::Result<Pair<'_, Rule>> {

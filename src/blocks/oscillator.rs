@@ -2,7 +2,7 @@ use std::sync::*;
 use std::f32::consts::*;
 
 use crate::blocks::constant::ConstantBlock;
-use crate::blocks::{SignalBlock, SignalSource};
+use crate::blocks::{BlockType, SignalBlock, SignalSource};
 
 pub struct OscillatorBlock {
     freq_source: SignalSource,
@@ -39,6 +39,20 @@ impl SignalBlock for OscillatorBlock {
 
     fn get(&self) -> f32 {
         f32::sin(self.phase)
+    }
+
+    fn sync_from(&mut self, other: &dyn SignalBlock) {
+        if other.block_type() == self.block_type() {
+            self.phase = other.sync_value();
+        }
+    }
+
+    fn block_type(&self) -> super::BlockType {
+        BlockType::Oscillator
+    }
+
+    fn sync_value(&self) -> f32 {
+        self.phase
     }
 }
 

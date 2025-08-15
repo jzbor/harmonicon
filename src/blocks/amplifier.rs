@@ -31,6 +31,12 @@ impl SignalBlock for AmplifierBlock {
         let mult = self.multiplicator.inner().lock().unwrap().get();
         src * mult
     }
+
+    fn sync_from(&mut self, other: &dyn SignalBlock) { }
+
+    fn block_type(&self) -> super::BlockType {
+        todo!()
+    }
 }
 
 impl Default for AmplifierBlock {

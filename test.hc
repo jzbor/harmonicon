@@ -5,11 +5,11 @@ osc slow = {
 }
 
 osc fast = {
-	freq: const 8.0,
+	freq: const 0.5,
 }
 
 osc osc1 = {
-	freq: amp { src: fast, mult: const 440.0, },
+	freq: amp { src: fast, mult: const 220.0, },
 }
 
 amp amp1 = {
