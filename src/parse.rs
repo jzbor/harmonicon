@@ -184,16 +184,25 @@ pub fn parse_stage2(pair: Pair<'_, Rule>) -> crate::Result<HarmoniconDriver> {
 
         let type_str = inner.next().unwrap();
         let name = inner.next().unwrap().as_str();
-        let initializer = inner.next().unwrap().into_inner().next().unwrap();
+        let rhs = inner.next().unwrap();
 
-        use BlockType::*;
-        match str::parse(type_str.as_str()).unwrap() {
-            Constant => driver.register_block(name.to_owned(), parse_const_init(initializer)?),
-            Oscillator => driver.register_block(name.to_owned(), parse_osc_init(initializer, &driver)?),
-            Amplifier => driver.register_block(name.to_owned(), parse_amp_init(initializer, &driver)?),
-            Stereo => driver.register_block(name.to_owned(), parse_stereo_init(initializer, &driver)?),
-            Sequencer => driver.register_block(name.to_owned(), parse_sequencer_init(initializer, &driver)?),
-        };
+        if rhs.as_rule() == Rule::initializer {
+            let rhs = rhs.into_inner().next().unwrap();
+            use BlockType::*;
+            match str::parse(type_str.as_str()).unwrap() {
+                Constant => driver.register_block(name.to_owned(), parse_const_init(rhs)?),
+                Oscillator => driver.register_block(name.to_owned(), parse_osc_init(rhs, &driver)?),
+                Amplifier => driver.register_block(name.to_owned(), parse_amp_init(rhs, &driver)?),
+                Stereo => driver.register_block(name.to_owned(), parse_stereo_init(rhs, &driver)?),
+                Sequencer => driver.register_block(name.to_owned(), parse_sequencer_init(rhs, &driver)?),
+            };
+        } else if rhs.as_rule() == Rule::name {
+            let block = driver.get_block(rhs.as_str())
+                .ok_or(HarmoniconError::UnknownBlock(rhs.as_str().to_owned()))?;
+
+        } else {
+            panic!("Parser should have ensured this is not reachable (rule: {:?})", rhs.as_rule());
+        }
     }
 
     Ok(driver)

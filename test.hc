@@ -10,6 +10,8 @@ osc oscil = {
 	wave: sin,
 }
 
+osc osc1 = oscil
+
 stereo out = {
 	left: oscil,
 	right: oscil,
