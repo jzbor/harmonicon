@@ -25,6 +25,9 @@ pub enum HarmoniconError {
 
     #[error("{0}")]
     FSNotify(#[from] notify::Error),
+
+    #[error("Unknown output '{0}'")]
+    UnknownOutput(String),
 }
 
 impl From<pest::error::Error<parse::Rule>> for HarmoniconError {

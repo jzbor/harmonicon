@@ -10,9 +10,12 @@ pub struct OscillatorBlock {
     wave: Waveform,
 }
 
+#[derive(Copy, Clone, Debug)]
 pub enum Waveform {
     Sinus,
     Sawtooth,
+    Square,
+    Triangle,
 }
 
 impl OscillatorBlock {
@@ -43,10 +46,13 @@ impl SignalBlock for OscillatorBlock {
     }
 
     fn get_mono(&self) -> f32 {
+        let fract = self.phase.fract().abs();
         use Waveform::*;
         match self.wave {
             Sinus => f32::sin(self.phase * 2.0 * PI),
-            Sawtooth => 1.0 - (self.phase - self.phase.floor()) * 2.0,
+            Sawtooth => 1.0 - fract,
+            Square => if fract < 0.5 { 1.0 } else { 0.0 }
+            Triangle => if fract < 0.5 { fract } else { 1.0 - fract }
         }
     }
 

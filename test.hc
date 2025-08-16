@@ -18,4 +18,10 @@ stereo out = {
 	shift: osc { freq: const 0.1, },
 }
 
+amp a = {
+	src: oscil,
+}
+
+
+
 output out

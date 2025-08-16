@@ -74,6 +74,8 @@ fn parse_osc_init(pair: Pair<'_, Rule>, driver: &HarmoniconDriver) -> crate::Res
                 let waveform = match value.into_inner().next().unwrap().as_rule() {
                     Rule::waveform_sin => Waveform::Sinus,
                     Rule::waveform_saw => Waveform::Sawtooth,
+                    Rule::waveform_sq => Waveform::Square,
+                    Rule::waveform_tri => Waveform::Triangle,
                     _ => return Err(HarmoniconError::TypeError("waveform", "other")),
                 };
                 osc.update_waveform(waveform);
@@ -211,8 +213,11 @@ pub fn parse_stage2(pair: Pair<'_, Rule>) -> crate::Result<HarmoniconDriver> {
         .filter(|p| p.as_rule() == Rule::output)
         .map(|r| r.clone().into_inner().next().unwrap().as_str())
         .last();
-    if let Some(name) = output_opt && let Some(out) = driver.get_block(name) {
-        driver.set_output(out.clone());
+    if let Some(name) = output_opt {
+        match driver.get_block(name) {
+            Some(out) => driver.set_output(out.clone()),
+            None => return Err(HarmoniconError::UnknownOutput(name.to_string())),
+        }
     } else if let Some(last) = last_block {
         driver.set_output(last);
     }

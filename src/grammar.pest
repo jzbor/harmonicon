@@ -23,9 +23,11 @@ parameter_value 	= _{ anonymous | waveform | sequence | name }
 sequence		= { "[" ~ note* ~ "]" }
 note			= @{ "C" | "D" | "E" | "F" | "G" | "A" | "H"  | "-" }
 
-waveform		= { waveform_sin | waveform_saw}
+waveform		= { (waveform_sin | waveform_saw | waveform_sq | waveform_tri) ~ (WHITESPACE | ",")+ }
 waveform_sin		= @{ "sinus" | "sin" }
 waveform_saw		= @{ "sawtooth" | "saw" }
+waveform_sq		= @{ "square" | "sq" }
+waveform_tri		= @{ "triangle" | "tri" }
 
 WHITESPACE = _{ " " | "\n" | "\t" }
 COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
