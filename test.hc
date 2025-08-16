@@ -17,3 +17,5 @@ stereo out = {
 	right: oscil,
 	shift: osc { freq: const 0.1, },
 }
+
+output out

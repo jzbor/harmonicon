@@ -5,6 +5,7 @@ use std::sync::mpsc::Receiver;
 use std::time::Duration;
 use std::{fs, sync::*};
 
+use crate::blocks::constant::ConstantBlock;
 use crate::error::HarmoniconError;
 use crate::{parse, HashMap};
 use crate::blocks::SignalBlock;
@@ -13,6 +14,7 @@ pub struct HarmoniconDriver {
     blocks: HashMap<String, Arc<Mutex<dyn SignalBlock>>>,
     update_rx: Option<Receiver<Self>>,
     pending: Option<f32>,
+    output: Arc<Mutex<dyn SignalBlock>>,
 }
 
 impl HarmoniconDriver {
@@ -21,6 +23,7 @@ impl HarmoniconDriver {
             blocks: HashMap::default(),
             update_rx: None,
             pending: None,
+            output: Arc::new(Mutex::new(ConstantBlock::default()))
         }
     }
 
@@ -34,6 +37,11 @@ impl HarmoniconDriver {
     pub fn set_update_rx(&mut self, rx: Receiver<Self>) {
         self.update_rx = Some(rx);
     }
+
+    pub fn set_output(&mut self, output: Arc<Mutex<dyn SignalBlock>>) {
+        self.output = output;
+    }
+
 
     pub fn register_block<T: SignalBlock + 'static>(&mut self, name: String, block: T) -> Arc<Mutex<dyn SignalBlock>> {
         let cell = Arc::new(Mutex::new(block));
@@ -60,6 +68,7 @@ impl HarmoniconDriver {
         }
 
         self.blocks = new_blocks;
+        self.output = new_driver.output;
     }
 }
 
@@ -96,8 +105,8 @@ impl Iterator for HarmoniconDriver {
             block.lock().unwrap().step();
         }
 
-        let left = self.blocks.get("out").unwrap().lock().unwrap().get_left();
-        let right = self.blocks.get("out").unwrap().lock().unwrap().get_right();
+        let left = self.output.lock().unwrap().get_left();
+        let right = self.output.lock().unwrap().get_right();
 
         self.pending = Some(right);
         Some(left)

@@ -1,6 +1,7 @@
-file		= { SOI ~ assignment* ~ EOI }
+file		= { SOI ~ (assignment | output)* ~ EOI }
 
 assignment	= { type ~ name ~ "=" ~ (initializer | name) }
+output		= { "output" ~ name }
 type		= { const_type | osc_type | amp_type | stereo_type | seq_type }
 initializer 	= { const_initializer | block_initializer }
 anonymous 	= { (const_type ~ const_initializer) | ((osc_type | amp_type | stereo_type | seq_type) ~ block_initializer) }
