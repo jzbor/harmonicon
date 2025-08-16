@@ -21,7 +21,7 @@ parameter_name		= @{ (ASCII_ALPHA | "_" | "-")+ }
 parameter_value 	= _{ anonymous | waveform | sequence | name }
 
 sequence		= { "[" ~ note* ~ "]" }
-note			= @{ "C" | "D" | "E" | "F" | "G" | "A" | "H"  | "-" }
+note			= @{ "-" | ("C" | "D" | "E" | "F" | "G" | "A" | "B") ~ ("#" | "b")? ~ ASCII_DIGIT? }
 
 waveform		= { (waveform_sin | waveform_saw | waveform_sq | waveform_tri) ~ (WHITESPACE | ",")+ }
 waveform_sin		= @{ "sinus" | "sin" }

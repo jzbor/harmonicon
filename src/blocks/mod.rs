@@ -14,7 +14,7 @@ pub trait SignalBlock : Send {
     fn get_mono(&self) -> f32;
     fn block_type(&self) -> BlockType;
 
-    fn sync_from(&mut self, other: &dyn SignalBlock) {}
+    fn sync_from(&mut self, _other: &dyn SignalBlock) {}
 
     fn sync_value(&self) -> f32 {
         0.0
@@ -31,7 +31,7 @@ pub trait SignalBlock : Send {
 
 pub enum SignalSource {
     Anonymous(Arc<Mutex<dyn SignalBlock>>),
-    Named(String, Weak<Mutex<dyn SignalBlock>>),
+    Named(Weak<Mutex<dyn SignalBlock>>),
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -53,7 +53,7 @@ impl SignalSource {
         use SignalSource::*;
         match self {
             Anonymous(sb) => sb.clone(),
-            Named(_, weak) => weak.upgrade().unwrap(),
+            Named(weak) => weak.upgrade().unwrap(),
         }
     }
 
@@ -61,7 +61,7 @@ impl SignalSource {
         use SignalSource::*;
         match self {
             Anonymous(sb) => sb.lock().unwrap().step(),
-            Named(_, _) => (),
+            Named(_) => (),
         }
     }
 

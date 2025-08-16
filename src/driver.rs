@@ -49,6 +49,13 @@ impl HarmoniconDriver {
         cell
     }
 
+    pub fn alias_block(&mut self, name: &str, alias: String) -> Option<&Arc<Mutex<dyn SignalBlock>>> {
+        match self.blocks.get(name).cloned() {
+            Some(sb) => { self.blocks.insert(alias.clone(), sb); self.blocks.get(&alias) },
+            None => None,
+        }
+    }
+
     pub fn get_block(&self, name: &str) -> Option<&Arc<Mutex<dyn SignalBlock>>> {
         self.blocks.get(name)
     }

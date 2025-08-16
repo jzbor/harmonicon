@@ -4,14 +4,11 @@ use std::str::FromStr;
 pub struct Note(f32);
 
 impl Note {
-    pub const C: Self = Note(261.6256);
-    pub const D: Self = Note(293.6648);
-    pub const E: Self = Note(329.6276);
-    pub const F: Self = Note(349.2282);
-    pub const G: Self = Note(391.9954);
-    pub const A: Self = Note(440.0000);
-    pub const H: Self = Note(493.8833);
     pub const SILENT: Self = Note(0.0);
+
+    pub fn from_key(n: usize) -> Self {
+        Note(440.0 * 2.0_f32.powf((n as f32 - 48.0) / 12.0))
+    }
 
     pub fn frequency(self) -> f32 {
         self.0
@@ -22,16 +19,35 @@ impl FromStr for Note {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "C" => Ok(Self::C),
-            "D" => Ok(Self::D),
-            "E" => Ok(Self::E),
-            "F" => Ok(Self::F),
-            "G" => Ok(Self::G),
-            "A" => Ok(Self::A),
-            "H" => Ok(Self::H),
-            "-" => Ok(Self::SILENT),
-            _ => Err(()),
+        if s == "-" {
+            return Ok(Self::SILENT);
         }
+
+        let key_str: String = s.chars().take_while(|c| !c.is_numeric()).collect();
+        let octave_str: String = s.chars().skip_while(|c| !c.is_numeric()).collect();
+
+        let key_offset = match key_str.as_str() {
+            "C" => 1,
+            "C#" | "Db" => 2,
+            "D" => 3,
+            "D#" | "Eb" => 4,
+            "E" => 5,
+            "F" => 6,
+            "F#" | "Gb" => 7,
+            "G" => 8,
+            "G#" | "Ab" => 9,
+            "A" => 10,
+            "A#" | "Bb" => 11,
+            "B" => 12,
+            _ => return Err(()),
+        };
+
+        let octave: usize = if !octave_str.is_empty() {
+            octave_str.parse().map_err(|_| ())?
+        } else {
+            4
+        };
+
+        Ok(Self::from_key(octave * 12 - 10 + key_offset))
     }
 }

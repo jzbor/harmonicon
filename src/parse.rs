@@ -35,7 +35,7 @@ fn parse_param_rhs(pair: Pair<'_, Rule>, driver: &HarmoniconDriver) -> crate::Re
     match pair.as_rule() {
         Rule::name => {
             driver.get_block(pair.as_str())
-                .map(|b| SignalSource::Named(pair.as_str().to_owned(), Arc::downgrade(b)))
+                .map(|b| SignalSource::Named(Arc::downgrade(b)))
                 .ok_or(HarmoniconError::UnknownBlock(pair.as_str().to_owned()))
         },
         Rule::anonymous => {
@@ -202,8 +202,9 @@ pub fn parse_stage2(pair: Pair<'_, Rule>) -> crate::Result<HarmoniconDriver> {
             };
             last_block = Some(block);
         } else if rhs.as_rule() == Rule::name {
-            let block = driver.get_block(rhs.as_str())
+            let block = driver.alias_block(rhs.as_str(), name.to_owned())
                 .ok_or(HarmoniconError::UnknownBlock(rhs.as_str().to_owned()))?;
+            last_block = Some(block.clone());
         } else {
             panic!("Parser should have ensured this is not reachable (rule: {:?})", rhs.as_rule());
         }

@@ -34,7 +34,9 @@ impl SignalBlock for SequencerBlock {
     }
 
     fn get_mono(&self) -> f32 {
-        if self.spacing.get_mono() >= 0.05 && (self.progress.round()  - self.progress).abs() < self.spacing.get_mono() / 2.0 {
+        let in_spacing = self.spacing.get_mono() >= 0.05
+            && (self.progress.round()  - self.progress).abs() < self.spacing.get_mono() / 2.0;
+        if in_spacing || self.sequence.len() == 0 {
             0.0
         } else {
             self.sequence[self.progress as usize % self.sequence.len()].frequency()

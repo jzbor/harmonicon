@@ -23,5 +23,6 @@ amp a = {
 }
 
 
+stereo b = a
 
 output out
