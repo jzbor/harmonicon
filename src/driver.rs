@@ -1,6 +1,5 @@
 use rodio::{Sample, Source};
 
-use std::cell::RefCell;
 use std::path::Path;
 use std::sync::mpsc::Receiver;
 use std::time::Duration;

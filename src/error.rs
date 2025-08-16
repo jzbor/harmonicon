@@ -1,4 +1,3 @@
-use std::fmt::Display;
 use std::{io, process};
 
 use colored::Colorize;

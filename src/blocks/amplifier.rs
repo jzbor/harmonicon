@@ -1,5 +1,4 @@
 use std::sync::*;
-use std::f32::consts::*;
 
 use crate::blocks::constant::ConstantBlock;
 use crate::blocks::{BlockType, SignalBlock, SignalSource};

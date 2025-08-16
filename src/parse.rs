@@ -1,5 +1,3 @@
-use std::str::FromStr;
-use std::sync::mpsc::Receiver;
 use std::sync::{Arc, Mutex};
 
 use pest::{iterators::*, Parser};
@@ -41,8 +39,8 @@ fn parse_param_rhs(pair: Pair<'_, Rule>, driver: &HarmoniconDriver) -> crate::Re
                 .ok_or(HarmoniconError::UnknownBlock(pair.as_str().to_owned()))
         },
         Rule::anonymous => {
-            parse_anon_init(pair, &driver)
-                .map(|b| SignalSource::Anonymous(b))
+            parse_anon_init(pair, driver)
+                .map(SignalSource::Anonymous)
         },
         _ => Err(HarmoniconError::TypeError("name or initializer", "other")),
     }
