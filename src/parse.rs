@@ -103,10 +103,44 @@ fn parse_amp_init(pair: Pair<'_, Rule>, driver: &HarmoniconDriver) -> crate::Res
             let value = inner.next().unwrap();
             let rhs = parse_param_rhs(value, driver)?;
 
-            match key {
-                "source" | "src" => amp.update_source(rhs),
-                "multiplicator" | "mult" => amp.update_multiplicator(rhs),
-                _ => return Err(HarmoniconError::UnknownProperty(key.to_owned(), "amplifier")),
+            if key.starts_with("source") || key.starts_with("src") {
+                let n: usize = if key.starts_with("source") {
+                    key.chars()
+                        .skip("source".len())
+                        .collect::<String>()
+                        .parse()
+                        .map_err(|_| HarmoniconError::UnknownProperty(key.to_owned(), "amplifier"))?
+                } else if key.starts_with("src") {
+                    key.chars()
+                        .skip("src".len())
+                        .collect::<String>()
+                        .parse()
+                        .map_err(|_| HarmoniconError::UnknownProperty(key.to_owned(), "amplifier"))?
+                } else {
+                    return Err(HarmoniconError::UnknownProperty(key.to_owned(), "amplifier"));
+                };
+
+                amp.update_source(n, true, rhs);
+            } else if key.starts_with("amplify") || key.starts_with("amp") {
+                let n: usize = if key.starts_with("amplify") {
+                    key.chars()
+                        .skip("source".len())
+                        .collect::<String>()
+                        .parse()
+                        .map_err(|_| HarmoniconError::UnknownProperty(key.to_owned(), "amplifier"))?
+                } else if key.starts_with("amp") {
+                    key.chars()
+                        .skip("src".len())
+                        .collect::<String>()
+                        .parse()
+                        .map_err(|_| HarmoniconError::UnknownProperty(key.to_owned(), "amplifier"))?
+                } else {
+                    return Err(HarmoniconError::UnknownProperty(key.to_owned(), "amplifier"));
+                };
+
+                amp.update_source(n, false, rhs);
+            } else {
+                return Err(HarmoniconError::UnknownProperty(key.to_owned(), "amplifier"));
             }
         }
         Ok(amp)

@@ -17,7 +17,7 @@ const_initializer	= @{ "-"? ~ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT+ }
 block_initializer	= { "{" ~ (block_parameter ~ ",")* ~ block_parameter? ~ "}" }
 
 block_parameter		= { parameter_name ~ ":" ~ parameter_value }
-parameter_name		= @{ (ASCII_ALPHA | "_" | "-")+ }
+parameter_name		= @{ (ASCII_ALPHA | "_" | "-")+ ~ ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*)? }
 parameter_value 	= _{ anonymous | waveform | sequence | name }
 
 sequence		= { "[" ~ note* ~ "]" }

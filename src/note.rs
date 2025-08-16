@@ -6,7 +6,7 @@ pub struct Note(f32);
 impl Note {
     pub const SILENT: Self = Note(0.0);
 
-    pub fn from_key(n: usize) -> Self {
+    pub fn from_key(n: i32) -> Self {
         Note(440.0 * 2.0_f32.powf((n as f32 - 48.0) / 12.0))
     }
 
@@ -42,12 +42,12 @@ impl FromStr for Note {
             _ => return Err(()),
         };
 
-        let octave: usize = if !octave_str.is_empty() {
+        let octave = if !octave_str.is_empty() {
             octave_str.parse().map_err(|_| ())?
         } else {
             4
         };
 
-        Ok(Self::from_key(octave * 12 - 10 + key_offset))
+        Ok(Self::from_key(octave * 12 + key_offset - 10))
     }
 }

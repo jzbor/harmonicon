@@ -1,58 +1,75 @@
 use std::sync::*;
 
 use crate::blocks::constant::ConstantBlock;
-use crate::blocks::{BlockType, SignalBlock, SignalSource};
+use crate::blocks::{BlockType, SignalBlock, SignalBlockChildren, SignalSource};
 
 pub struct AmplifierBlock {
-    source: SignalSource,
-    multiplicator: SignalSource,
+    sources: Vec<(SignalSource, SignalSource)>,
 }
 
 
 impl AmplifierBlock {
-    pub fn update_source(&mut self, source: SignalSource) {
-        self.source = source
-    }
+    pub fn update_source(&mut self, n: usize, first: bool, source: SignalSource) {
+        while self.sources.len() <= n {
+            self.sources.push((SignalSource::default(), SignalSource::new_anonymous(ConstantBlock::new(1.0))));
+        }
 
-    pub fn update_multiplicator(&mut self, mult: SignalSource) {
-        self.multiplicator = mult
+        if first {
+            self.sources[n].0 = source;
+        } else {
+            self.sources[n].1 = source;
+        }
     }
 }
 
 impl SignalBlock for AmplifierBlock {
     fn step(&mut self) {
-        self.source.step();
-        self.multiplicator.step();
+        for (s1, s2) in &mut self.sources {
+            s1.step();
+            s2.step();
+        }
     }
 
     fn get_mono(&self) -> f32 {
-        let src = self.source.inner().lock().unwrap().get_mono();
-        let mult = self.multiplicator.inner().lock().unwrap().get_mono();
-        src * mult
+        self.sources.iter()
+            .map(|(s1, s2)| s1.get_mono() * s2.get_mono())
+            .sum()
     }
 
     fn get_left(&self) -> f32 {
-        let src_left = self.source.inner().lock().unwrap().get_left();
-        let mult = self.multiplicator.inner().lock().unwrap().get_mono();
-        src_left * mult
+        self.sources.iter()
+            .map(|(s1, s2)| s1.get_left() * s2.get_left())
+            .sum()
     }
 
     fn get_right(&self) -> f32 {
-        let src_right = self.source.inner().lock().unwrap().get_right();
-        let mult = self.multiplicator.inner().lock().unwrap().get_mono();
-        src_right * mult
+        self.sources.iter()
+            .map(|(s1, s2)| s1.get_right() * s2.get_right())
+            .sum()
     }
 
     fn block_type(&self) -> super::BlockType {
         BlockType::Amplifier
+    }
+
+    fn sync_from(&mut self, other: &dyn SignalBlock) {
+        self.sync_children_from(other);
+    }
+
+    fn children(&self) -> SignalBlockChildren {
+        let mut children = SignalBlockChildren::new();
+        for (s1, s2) in &self.sources {
+            children.push(s1.inner());
+            children.push(s2.inner());
+        }
+        children
     }
 }
 
 impl Default for AmplifierBlock {
     fn default() -> Self {
         AmplifierBlock {
-            source: SignalSource::Anonymous(Arc::new(Mutex::new(ConstantBlock::new(0.0)))),
-            multiplicator: SignalSource::Anonymous(Arc::new(Mutex::new(ConstantBlock::new(1.0)))),
+            sources: Vec::new()
         }
     }
 }

@@ -1,5 +1,5 @@
 
-use crate::blocks::{BlockType, SignalBlock, SignalSource};
+use crate::blocks::{BlockType, SignalBlock, SignalBlockChildren, SignalSource};
 
 #[derive(Default)]
 pub struct StereoBlock {
@@ -47,5 +47,17 @@ impl SignalBlock for StereoBlock {
 
     fn block_type(&self) -> super::BlockType {
         BlockType::Stereo
+    }
+
+    fn children(&self) -> SignalBlockChildren {
+        let mut children = SignalBlockChildren::new();
+        children.push(self.left.inner());
+        children.push(self.right.inner());
+        children.push(self.shift.inner());
+        children
+    }
+
+    fn sync_from(&mut self, other: &dyn SignalBlock) {
+        self.sync_children_from(other);
     }
 }

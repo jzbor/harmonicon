@@ -2,7 +2,7 @@ use std::sync::*;
 use std::f32::consts::*;
 
 use crate::blocks::constant::ConstantBlock;
-use crate::blocks::{BlockType, SignalBlock, SignalSource};
+use crate::blocks::{BlockType, SignalBlock, SignalBlockChildren, SignalSource};
 
 pub struct OscillatorBlock {
     freq_source: SignalSource,
@@ -52,7 +52,7 @@ impl SignalBlock for OscillatorBlock {
             Sinus => f32::sin(self.phase * 2.0 * PI),
             Sawtooth => 1.0 - fract,
             Square => if fract < 0.5 { 1.0 } else { 0.0 }
-            Triangle => if fract < 0.5 { fract } else { 1.0 - fract }
+            Triangle => if fract < 0.5 { 2.0 * fract } else { 1.0 - 2.0 * fract }
         }
     }
 
@@ -60,6 +60,8 @@ impl SignalBlock for OscillatorBlock {
         if other.block_type() == self.block_type() {
             self.phase = other.sync_value();
         }
+
+        self.sync_children_from(other);
     }
 
     fn block_type(&self) -> super::BlockType {
@@ -68,6 +70,12 @@ impl SignalBlock for OscillatorBlock {
 
     fn sync_value(&self) -> f32 {
         self.phase
+    }
+
+    fn children(&self) -> SignalBlockChildren {
+        let mut children = SignalBlockChildren::new();
+        children.push(self.freq_source.inner());
+        children
     }
 }
 

@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+use std::iter;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex, Weak};
 
@@ -14,7 +16,7 @@ pub trait SignalBlock : Send {
     fn get_mono(&self) -> f32;
     fn block_type(&self) -> BlockType;
 
-    fn sync_from(&mut self, _other: &dyn SignalBlock) {}
+    fn sync_from(&mut self, _other: &dyn SignalBlock);
 
     fn sync_value(&self) -> f32 {
         0.0
@@ -26,6 +28,20 @@ pub trait SignalBlock : Send {
 
     fn get_right(&self) -> f32 {
         self.get_mono()
+    }
+
+    fn children(&self) -> SignalBlockChildren {
+        SignalBlockChildren(VecDeque::new())
+    }
+
+    fn sync_children_from(&self, other: &dyn SignalBlock) {
+        for (child, other_child) in iter::zip(self.children(), other.children()) {
+            let mut child = child.lock().unwrap();
+            let other_child = other_child.lock().unwrap();
+            if child.block_type() == other_child.block_type() {
+                child.sync_from(&*other_child);
+            }
+        }
     }
 }
 
@@ -42,6 +58,8 @@ pub enum BlockType {
     Stereo,
     Sequencer,
 }
+
+pub struct SignalBlockChildren(VecDeque<Arc<Mutex<dyn SignalBlock>>>);
 
 
 impl SignalSource {
@@ -78,6 +96,16 @@ impl SignalSource {
     }
 }
 
+impl SignalBlockChildren {
+    fn new() -> Self {
+        SignalBlockChildren(VecDeque::new())
+    }
+
+    fn push(&mut self, child: Arc<Mutex<dyn SignalBlock>>) {
+        self.0.push_back(child);
+    }
+}
+
 
 impl FromStr for BlockType {
     type Err = ();
@@ -98,5 +126,13 @@ impl FromStr for BlockType {
 impl Default for SignalSource {
     fn default() -> Self {
         SignalSource::Anonymous(Arc::new(Mutex::new(ConstantBlock::default())))
+    }
+}
+
+impl Iterator for SignalBlockChildren {
+    type Item = Arc<Mutex<dyn SignalBlock>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.pop_front()
     }
 }

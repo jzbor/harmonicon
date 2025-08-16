@@ -1,28 +1,29 @@
 seq notes = {
-	seq: [ C E G E C G ],
-	bpm: const 220.0,
+	seq: [ G A G A C C ],
+	bpm: const 160.0,
 	spacing: const 0.0,
 }
 
 
-osc oscil = {
+osc osc = {
+	freq: notes,
+	wave: saw,
+}
+
+osc osc2 = {
 	freq: notes,
 	wave: sin,
 }
 
-osc osc1 = oscil
-
-stereo out = {
-	left: oscil,
-	right: oscil,
-	shift: osc { freq: const 0.1, },
+osc slow = {
+	freq: const 0.5,
+	wave: square,
 }
 
-amp a = {
-	src: oscil,
+amp mixer = {
+	src0: osc,
+	amp0: slow,
+	src1: osc2,
 }
 
-
-stereo b = a
-
-output out
+output mixer

@@ -1,5 +1,5 @@
 use crate::blocks::constant::ConstantBlock;
-use crate::blocks::{BlockType, SignalBlock, SignalSource};
+use crate::blocks::{BlockType, SignalBlock, SignalBlockChildren, SignalSource};
 use crate::note::Note;
 
 pub struct SequencerBlock {
@@ -53,6 +53,13 @@ impl SignalBlock for SequencerBlock {
 
     fn sync_value(&self) -> f32 {
         self.progress
+    }
+
+    fn children(&self) -> SignalBlockChildren {
+        let mut children = SignalBlockChildren::new();
+        children.push(self.bpm.inner());
+        children.push(self.spacing.inner());
+        children
     }
 }
 
