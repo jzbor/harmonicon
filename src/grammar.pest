@@ -17,10 +17,14 @@ block_initializer	= { "{" ~ (block_parameter ~ ",")* ~ block_parameter? ~ "}" }
 
 block_parameter		= { parameter_name ~ ":" ~ parameter_value }
 parameter_name		= @{ (ASCII_ALPHA | "_" | "-")+ }
-parameter_value 	= _{ anonymous | name | sequence }
+parameter_value 	= _{ anonymous | waveform | sequence | name }
 
 sequence		= { "[" ~ note* ~ "]" }
 note			= @{ "C" | "D" | "E" | "F" | "G" | "A" | "H"  | "-" }
+
+waveform		= { waveform_sin | waveform_saw}
+waveform_sin		= @{ "sinus" | "sin" }
+waveform_saw		= @{ "sawtooth" | "saw" }
 
 WHITESPACE = _{ " " | "\n" | "\t" }
 COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }

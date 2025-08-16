@@ -4,7 +4,7 @@ use pest::{iterators::*, Parser};
 
 use crate::blocks::amplifier::AmplifierBlock;
 use crate::blocks::constant::ConstantBlock;
-use crate::blocks::oscillator::OscillatorBlock;
+use crate::blocks::oscillator::{OscillatorBlock, Waveform};
 use crate::blocks::sequencer::SequencerBlock;
 use crate::blocks::stereo::StereoBlock;
 use crate::blocks::{BlockType, SignalBlock, SignalSource};
@@ -68,13 +68,21 @@ fn parse_osc_init(pair: Pair<'_, Rule>, driver: &HarmoniconDriver) -> crate::Res
         for item in pair.into_inner() {
             let mut inner = item.into_inner();
             let key = inner.next().unwrap().as_str();
-
             let value = inner.next().unwrap();
-            let rhs = parse_param_rhs(value, driver)?;
 
-            match key {
-                "frequency" | "freq" => osc.update_frequency(rhs),
-                _ => return Err(HarmoniconError::UnknownProperty(key.to_owned(), "oscillator")),
+            if key == "wave" || key == "waveform" {
+                let waveform = match value.into_inner().next().unwrap().as_rule() {
+                    Rule::waveform_sin => Waveform::Sinus,
+                    Rule::waveform_saw => Waveform::Sawtooth,
+                    _ => return Err(HarmoniconError::TypeError("waveform", "other")),
+                };
+                osc.update_waveform(waveform);
+            } else {
+                let rhs = parse_param_rhs(value, driver)?;
+                match key {
+                    "frequency" | "freq" => osc.update_frequency(rhs),
+                    _ => return Err(HarmoniconError::UnknownProperty(key.to_owned(), "oscillator")),
+                }
             }
         }
         Ok(osc)

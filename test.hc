@@ -7,6 +7,7 @@ seq notes = {
 
 osc oscil = {
 	freq: notes,
+	wave: sin,
 }
 
 stereo out = {

@@ -7,16 +7,21 @@ use crate::blocks::{BlockType, SignalBlock, SignalSource};
 pub struct OscillatorBlock {
     freq_source: SignalSource,
     phase: f32,
+    wave: Waveform,
 }
 
+pub enum Waveform {
+    Sinus,
+    Sawtooth,
+}
 
 impl OscillatorBlock {
-    pub fn new(freq_source: SignalSource) -> Self {
-        OscillatorBlock { freq_source, phase: 0.0 }
-    }
-
     pub fn update_frequency(&mut self, freq_source: SignalSource) {
         self.freq_source = freq_source;
+    }
+
+    pub fn update_waveform(&mut self, wave: Waveform) {
+        self.wave = wave;
     }
 }
 
@@ -26,19 +31,23 @@ impl SignalBlock for OscillatorBlock {
         self.freq_source.step();
 
         let freq = self.freq_source.inner().lock().unwrap().get_mono();
-        self.phase += 2.0 * PI * freq / (crate::SAMPLE_RATE as f32);
+        self.phase += freq / (crate::SAMPLE_RATE as f32);
 
         // limit phase between 0 and 2*PI to avoid inaccuracies
-        while self.phase >= 2.0 * PI {
-            self.phase -= 2.0 * PI;
+        while self.phase > 1.0 {
+            self.phase -= 1.0;
         }
         while self.phase < 0.0 {
-            self.phase += 2.0 * PI;
+            self.phase += 1.0;
         }
     }
 
     fn get_mono(&self) -> f32 {
-        f32::sin(self.phase)
+        use Waveform::*;
+        match self.wave {
+            Sinus => f32::sin(self.phase * 2.0 * PI),
+            Sawtooth => 1.0 - (self.phase - self.phase.floor()) * 2.0,
+        }
     }
 
     fn sync_from(&mut self, other: &dyn SignalBlock) {
@@ -61,7 +70,8 @@ impl Default for OscillatorBlock {
     fn default() -> Self {
         OscillatorBlock {
             freq_source: SignalSource::Anonymous(Arc::new(Mutex::new(ConstantBlock::new(440.0)))),
-            phase: 0.0
+            phase: 0.0,
+            wave: Waveform::Sinus,
         }
     }
 }
