@@ -21,6 +21,15 @@
         alsa-lib
       ];
     };
+
+    devShells.default = pkgs.mkShell {
+      nativeBuildInputs = with pkgs; [
+        pkg-config
+      ];
+      buildInputs = with pkgs; [
+        alsa-lib
+      ];
+    };
   });
 }
 
