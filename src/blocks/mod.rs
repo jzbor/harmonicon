@@ -7,6 +7,7 @@ pub mod constant;
 pub mod oscillator;
 pub mod amplifier;
 pub mod stereo;
+pub mod sequencer;
 
 pub trait SignalBlock : Send {
     fn step(&mut self);
@@ -39,10 +40,15 @@ pub enum BlockType {
     Oscillator,
     Amplifier,
     Stereo,
+    Sequencer,
 }
 
 
 impl SignalSource {
+    pub fn new_anonymous(sb: impl SignalBlock + 'static) -> Self {
+        SignalSource::Anonymous(Arc::new(Mutex::new(sb)))
+    }
+
     pub fn inner(&self) -> Arc<Mutex<dyn SignalBlock>> {
         use SignalSource::*;
         match self {
@@ -83,6 +89,7 @@ impl FromStr for BlockType {
             "oscillator" | "osc" => Ok(Oscillator),
             "amplifier" | "amp" => Ok(Amplifier),
             "stereo" => Ok(Stereo),
+            "sequencer" | "seq" => Ok(Sequencer),
             _ => Err(()),
         }
     }

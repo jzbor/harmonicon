@@ -17,6 +17,7 @@ use crate::error::resolve;
 mod blocks;
 mod error;
 mod driver;
+mod note;
 mod parse;
 mod reload;
 

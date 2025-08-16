@@ -1,20 +1,16 @@
-const i = 220.0
-
-osc slow = {
-	freq: const 0.1,
+seq notes = {
+	seq: [ C E G E C G ],
+	bpm: const 220.0,
+	spacing: const 0.0,
 }
 
-osc freq = {
-	freq: const 80.0,
+
+osc oscil = {
+	freq: notes,
 }
 
-stereo s = {
-	left: freq,
-	right: freq,
-	shift: slow,
-}
-
-amp out = {
-	src: s,
-	mult: const 0.5,
+stereo out = {
+	left: oscil,
+	right: oscil,
+	shift: osc { freq: const 0.1, },
 }

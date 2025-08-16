@@ -7,10 +7,12 @@ use pest::{iterators::*, Parser};
 use crate::blocks::amplifier::AmplifierBlock;
 use crate::blocks::constant::ConstantBlock;
 use crate::blocks::oscillator::OscillatorBlock;
+use crate::blocks::sequencer::SequencerBlock;
 use crate::blocks::stereo::StereoBlock;
 use crate::blocks::{BlockType, SignalBlock, SignalSource};
 use crate::error::HarmoniconError;
 use crate::driver::HarmoniconDriver;
+use crate::note::Note;
 
 #[derive(pest_derive::Parser)]
 #[grammar = "grammar.pest"]
@@ -27,6 +29,7 @@ fn parse_anon_init(pair: Pair<'_, Rule>, driver: &HarmoniconDriver) -> crate::Re
         Oscillator => parse_osc_init(init, driver).map(|sb| Arc::new(Mutex::new(sb)) as Arc<Mutex<dyn SignalBlock>>),
         Amplifier => parse_amp_init(init, driver).map(|sb| Arc::new(Mutex::new(sb)) as Arc<Mutex<dyn SignalBlock>>),
         Stereo => parse_stereo_init(init, driver).map(|sb| Arc::new(Mutex::new(sb)) as Arc<Mutex<dyn SignalBlock>>),
+        Sequencer => parse_sequencer_init(init, driver).map(|sb| Arc::new(Mutex::new(sb)) as Arc<Mutex<dyn SignalBlock>>),
     }
 }
 
@@ -41,8 +44,22 @@ fn parse_param_rhs(pair: Pair<'_, Rule>, driver: &HarmoniconDriver) -> crate::Re
             parse_anon_init(pair, &driver)
                 .map(|b| SignalSource::Anonymous(b))
         },
-        _ => panic!(),
+        _ => Err(HarmoniconError::TypeError("name or initializer", "other")),
     }
+}
+
+fn parse_sequence(pair: Pair<'_, Rule>) -> crate::Result<Vec<Note>> {
+    if pair.as_rule() != Rule::sequence {
+        return Err(HarmoniconError::TypeError("sequence", "other"));
+    }
+
+    let mut seq = Vec::new();
+    for pair in pair.into_inner() {
+        let note = str::parse(pair.as_str()).unwrap();
+        seq.push(note);
+    }
+
+    Ok(seq)
 }
 
 fn parse_osc_init(pair: Pair<'_, Rule>, driver: &HarmoniconDriver) -> crate::Result<OscillatorBlock> {
@@ -111,6 +128,33 @@ fn parse_stereo_init(pair: Pair<'_, Rule>, driver: &HarmoniconDriver) -> crate::
     }
 }
 
+fn parse_sequencer_init(pair: Pair<'_, Rule>, driver: &HarmoniconDriver) -> crate::Result<SequencerBlock> {
+    if pair.as_rule() != Rule::block_initializer {
+        Err(HarmoniconError::TypeError("stereo initializer", "other initializer"))
+    } else {
+        let mut sequencer = SequencerBlock::default();
+        for item in pair.into_inner() {
+            let mut inner = item.into_inner();
+            let key = inner.next().unwrap().as_str();
+
+            let value = inner.next().unwrap();
+            if key == "seq" || key == "sequence" {
+                let seq = parse_sequence(value)?;
+                sequencer.update_sequence(seq);
+            } else {
+                let rhs = parse_param_rhs(value, driver)?;
+
+                match key {
+                    "bpm" => sequencer.update_bpm(rhs),
+                    "spacing" => sequencer.update_spacing(rhs),
+                    _ => return Err(HarmoniconError::UnknownProperty(key.to_owned(), "sequencer")),
+                }
+            }
+        }
+        Ok(sequencer)
+    }
+}
+
 fn parse_const_init(pair: Pair<'_, Rule>) -> crate::Result<ConstantBlock> {
     if pair.as_rule() != Rule::const_initializer {
         Err(HarmoniconError::TypeError("constant initializer", "other initializer"))
@@ -142,6 +186,7 @@ pub fn parse_stage2(pair: Pair<'_, Rule>) -> crate::Result<HarmoniconDriver> {
             Oscillator => driver.register_block(name.to_owned(), parse_osc_init(initializer, &driver)?),
             Amplifier => driver.register_block(name.to_owned(), parse_amp_init(initializer, &driver)?),
             Stereo => driver.register_block(name.to_owned(), parse_stereo_init(initializer, &driver)?),
+            Sequencer => driver.register_block(name.to_owned(), parse_sequencer_init(initializer, &driver)?),
         };
     }
 

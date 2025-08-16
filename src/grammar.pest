@@ -1,22 +1,26 @@
 file		= { SOI ~ assignment* ~ EOI }
 
 assignment	= { type ~ name ~ "=" ~ initializer }
-type		= { const_type | osc_type | amp_type | stereo_type }
+type		= { const_type | osc_type | amp_type | stereo_type | seq_type }
 initializer 	= { const_initializer | block_initializer }
-anonymous 	= { (const_type ~ const_initializer) | ((osc_type | amp_type | stereo_type) ~ block_initializer) }
+anonymous 	= { (const_type ~ const_initializer) | ((osc_type | amp_type | stereo_type | seq_type) ~ block_initializer) }
 name		= @{ (ASCII_ALPHANUMERIC | "_" | "-")+ }
 
 const_type 	= @{ "constant" | "const" }
 osc_type	= @{ "oscillator" | "osc" }
 amp_type	= @{ "amplifier" | "amp" }
 stereo_type	= @{ "stereo" }
+seq_type	= @{ "sequencer" | "seq" }
 
 const_initializer	= @{ "-"? ~ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT+ }
-block_initializer	= { "{" ~ block_parameter* ~ "}" }
+block_initializer	= { "{" ~ (block_parameter ~ ",")* ~ block_parameter? ~ "}" }
 
-block_parameter		= { parameter_name ~ ":" ~ parameter_value ~ "," }
+block_parameter		= { parameter_name ~ ":" ~ parameter_value }
 parameter_name		= @{ (ASCII_ALPHA | "_" | "-")+ }
-parameter_value 	= _{ anonymous | name }
+parameter_value 	= _{ anonymous | name | sequence }
+
+sequence		= { "[" ~ note* ~ "]" }
+note			= @{ "C" | "D" | "E" | "F" | "G" | "A" | "H"  | "-" }
 
 WHITESPACE = _{ " " | "\n" | "\t" }
 COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
